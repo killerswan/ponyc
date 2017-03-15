@@ -13,7 +13,7 @@ case "$REPO_TYPE" in
     FILES="\"files\":
         [
           {
-            \"includePattern\": \"\\\\/home\\\\/travis\\\\/build\\\\/ponylang\\\\/ponyc\\\\/build\\\\/bin\\\\/(.*\\\\.deb)\", \"uploadPattern\": \"\$1\",
+            \"includePattern\": \"\\\\/home\\\\/travis\\\\/build\\\\/killerswan\\\\/ponyc\\\\/build\\\\/bin\\\\/(.*\\\\.deb)\", \"uploadPattern\": \"\$1\",
             \"matrixParams\": {
             \"deb_distribution\": \"pony-language\",
             \"deb_component\": \"main\",
@@ -25,14 +25,14 @@ case "$REPO_TYPE" in
   "rpm")
     FILES="\"files\":
       [
-        {\"includePattern\": \"\\\\/home\\\\/travis\\\\/build\\\\/ponylang\\\\/ponyc\\\\/build\\\\/bin\\\\/(.*\\\\.rpm)\", \"uploadPattern\": \"\$1\"}
+        {\"includePattern\": \"\\\\/home\\\\/travis\\\\/build\\\\/killerswan\\\\/ponyc\\\\/build\\\\/bin\\\\/(.*\\\\.rpm)\", \"uploadPattern\": \"\$1\"}
       ],
     \"publish\": true" 
     ;;
   "source")
     FILES="\"files\":
       [
-        {\"includePattern\": \"\\\\/home\\\\/travis\\\\/build\\\\/ponylang\\\\/ponyc\\\\/build\\\\/bin\\\\/(.*\\\\.tar.bz2)\", \"uploadPattern\": \"\$1\"}
+        {\"includePattern\": \"\\\\/home\\\\/travis\\\\/build\\\\/killerswan\\\\/ponyc\\\\/build\\\\/bin\\\\/(.*\\\\.tar.bz2)\", \"uploadPattern\": \"\$1\"}
       ],
     \"publish\": true"
     ;;
@@ -42,7 +42,7 @@ YAML="{
   \"package\": {
     \"repo\": \"$BINTRAY_REPO_NAME\",
     \"name\": \"$PACKAGE_NAME\",
-    \"subject\": \"pony-language\"
+    \"subject\": \"killerswan\"
   },
   \"version\": {
     \"name\": \"$PACKAGE_VERSION\",
