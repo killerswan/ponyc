@@ -296,7 +296,7 @@ static bool link_exe(compile_t* c, ast_t* program,
 #elif defined(PLATFORM_IS_WINDOWS)
   vcvars_t vcvars;
 
-  if(!vcvars_get(&vcvars, errors))
+  if(!vcvars_get(c, &vcvars, errors))
   {
     errorf(errors, NULL, "unable to link: no vcvars");
     return false;
@@ -323,7 +323,7 @@ static bool link_exe(compile_t* c, ast_t* program,
 
   while (true)
   {
-    int num_written = snprintf(ld_cmd, ld_len,
+    size_t num_written = snprintf(ld_cmd, ld_len,
       "cmd /C \"\"%s\" /DEBUG /NOLOGO /MACHINE:X64 "
       "/OUT:%s "
       "%s %s "

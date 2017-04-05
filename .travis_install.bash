@@ -1,8 +1,7 @@
 #! /bin/bash
 
-set +o errexit
-set +o nounset
-set +o
+set -o errexit
+set -o nounset
 
 if [[ "$TRAVIS_BRANCH" == "release" && "$FAVORITE_CONFIG" != "yes" ]]
 then
@@ -66,6 +65,9 @@ case "${TRAVIS_OS_NAME}:${LLVM_CONFIG}" in
 
   "osx:llvm-config-3.9")
     brew update
+    brew install shellcheck
+    shellcheck ./.*.bash ./*.bash
+
     brew install pcre2
     brew install libressl
 

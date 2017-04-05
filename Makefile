@@ -9,25 +9,15 @@ else
   ifeq ($(UNAME_S),Linux)
     OSTYPE = linux
 
-    ifneq (,$(shell which gcc-ar 2> /dev/null))
-      AR = gcc-ar
+    ifndef AR
+      ifneq (,$(shell which gcc-ar 2> /dev/null))
+        AR = gcc-ar
+      endif
     endif
   endif
 
   ifeq ($(UNAME_S),Darwin)
     OSTYPE = osx
-    ifneq (,$(shell which llvm-ar-mp-3.8 2> /dev/null))
-      AR := llvm-ar-mp-3.8
-      AR_FLAGS := rcs
-    else
-      ifneq (,$(shell which llvm-ar-3.8 2> /dev/null))
-        AR := llvm-ar-3.8
-        AR_FLAGS := rcs
-      else
-        AR := /usr/bin/ar
-	AR_FLAGS := -rcs
-      endif
-    endif
   endif
 
   ifeq ($(UNAME_S),FreeBSD)
@@ -169,7 +159,11 @@ ifeq ($(OSTYPE),osx)
 endif
 
 ifndef LLVM_CONFIG
-  ifneq (,$(shell which llvm-config-3.9 2> /dev/null))
+	ifneq (,$(shell which /usr/local/opt/llvm@3.9/bin/llvm-config 2> /dev/null))
+    LLVM_CONFIG = /usr/local/opt/llvm@3.9/bin/llvm-config
+    LLVM_LINK = /usr/local/opt/llvm@3.9/bin/llvm-link
+    LLVM_OPT = /usr/local/opt/llvm@3.9/bin/opt
+  else ifneq (,$(shell which llvm-config-3.9 2> /dev/null))
     LLVM_CONFIG = llvm-config-3.9
     LLVM_LINK = llvm-link-3.9
     LLVM_OPT = opt-3.9
@@ -217,6 +211,24 @@ ifndef LLVM_CONFIG
 endif
 
 llvm_version := $(shell $(LLVM_CONFIG) --version)
+
+ifeq ($(OSTYPE),osx)
+	llvm_bindir := $(shell $(LLVM_CONFIG) --bindir)
+
+  ifneq (,$(shell which $(llvm_bindir)/llvm-ar 2> /dev/null))
+    AR = $(llvm_bindir)/llvm-ar
+    AR_FLAGS := rcs
+  else ifneq (,$(shell which llvm-ar-mp-3.8 2> /dev/null))
+    AR = llvm-ar-mp-3.8
+    AR_FLAGS := rcs
+  else ifneq (,$(shell which llvm-ar-3.8 2> /dev/null))
+    AR = llvm-ar-3.8
+    AR_FLAGS := rcs
+  else
+    AR = /usr/bin/ar
+		AR_FLAGS := -rcs
+  endif
+endif
 
 ifeq ($(llvm_version),3.7.1)
 else ifeq ($(llvm_version),3.8.1)
@@ -319,7 +331,7 @@ endif
 # (4) a list of the libraries to link against
 llvm.ldflags := $(shell $(LLVM_CONFIG) --ldflags)
 llvm.include.dir := $(shell $(LLVM_CONFIG) --includedir)
-include.paths := $(shell echo | cc -v -E - 2>&1)
+include.paths := $(shell echo | $(CC) -v -E - 2>&1)
 ifeq (,$(findstring $(llvm.include.dir),$(include.paths)))
 # LLVM include directory is not in the existing paths;
 # put it at the top of the system list
@@ -761,28 +773,27 @@ test-ci: all
 	@rm examples1
 
 # Note: linux only
-# FIXME: why is $(branch) empty?
 define EXPAND_DEPLOY
 deploy: test
 	$(SILENT)bash .bintray.bash debian "$(package_version)" "$(package_name)"
 	$(SILENT)bash .bintray.bash rpm    "$(package_version)" "$(package_name)"
 	$(SILENT)bash .bintray.bash source "$(package_version)" "$(package_name)"
-	@mkdir build/bin
+	@mkdir -p build/bin
 	@mkdir -p $(package)/usr/bin
 	@mkdir -p $(package)/usr/include/pony/detail
 	@mkdir -p $(package)/usr/lib
 	@mkdir -p $(package)/usr/lib/pony/$(package_version)/bin
 	@mkdir -p $(package)/usr/lib/pony/$(package_version)/include/pony/detail
 	@mkdir -p $(package)/usr/lib/pony/$(package_version)/lib
-	$(SILENT)cp build/release/libponyc.a $(package)/usr/lib/pony/$(package_version)/lib
-	$(SILENT)cp build/release/libponyrt.a $(package)/usr/lib/pony/$(package_version)/lib
+	$(SILENT)cp $(PONY_BUILD_DIR)/libponyc.a $(package)/usr/lib/pony/$(package_version)/lib
+	$(SILENT)cp $(PONY_BUILD_DIR)/libponyrt.a $(package)/usr/lib/pony/$(package_version)/lib
 ifeq ($(OSTYPE),linux)
-	$(SILENT)cp build/release/libponyrt-pic.a $(package)/usr/lib/pony/$(package_version)/lib
+	$(SILENT)cp $(PONY_BUILD_DIR)/libponyrt-pic.a $(package)/usr/lib/pony/$(package_version)/lib
 endif
-ifneq ($(wildcard build/release/libponyrt.bc),)
-	$(SILENT)cp build/release/libponyrt.bc $(package)/usr/lib/pony/$(package_version)/lib
+ifneq ($(wildcard $(PONY_BUILD_DIR)/libponyrt.bc),)
+	$(SILENT)cp $(PONY_BUILD_DIR)/libponyrt.bc $(package)/usr/lib/pony/$(package_version)/lib
 endif
-	$(SILENT)cp build/release/ponyc $(package)/usr/lib/pony/$(package_version)/bin
+	$(SILENT)cp $(PONY_BUILD_DIR)/ponyc $(package)/usr/lib/pony/$(package_version)/bin
 	$(SILENT)cp src/libponyrt/pony.h $(package)/usr/lib/pony/$(package_version)/include
 	$(SILENT)cp src/common/pony/detail/atomics.h $(package)/usr/lib/pony/$(package_version)/include/pony/detail
 	$(SILENT)ln -s /usr/lib/pony/$(package_version)/lib/libponyrt.a $(package)/usr/lib/libponyrt.a
@@ -797,7 +808,7 @@ endif
 	$(SILENT)ln -s /usr/lib/pony/$(package_version)/include/pony.h $(package)/usr/include/pony.h
 	$(SILENT)ln -s /usr/lib/pony/$(package_version)/include/pony/detail/atomics.h $(package)/usr/include/pony/detail/atomics.h
 	$(SILENT)cp -r packages $(package)/usr/lib/pony/$(package_version)/
-	$(SILENT)build/release/ponyc packages/stdlib -rexpr -g -o $(package)/usr/lib/pony/$(package_version)
+	$(SILENT)$(PONY_BUILD_DIR)/ponyc packages/stdlib -rexpr -g -o $(package)/usr/lib/pony/$(package_version)
 	$(SILENT)fpm -s dir -t deb -C $(package) -p build/bin --name $(package_name) --conflicts "ponyc-master" --conflicts "ponyc-release" --version $(package_base_version) --iteration "$(package_iteration)" --description "The Pony Compiler" --provides "ponyc" --provides "ponyc-release"
 	$(SILENT)fpm -s dir -t rpm -C $(package) -p build/bin --name $(package_name) --conflicts "ponyc-master" --conflicts "ponyc-release" --version $(package_base_version) --iteration "$(package_iteration)" --description "The Pony Compiler" --provides "ponyc" --provides "ponyc-release" --depends "ponydep-ncurses"
 	$(SILENT)git archive HEAD > build/bin/$(archive)
@@ -825,6 +836,9 @@ stats:
 
 clean:
 	@rm -rf $(PONY_BUILD_DIR)
+	@rm -rf $(package)
+	@rm -rf build/bin
+	@rm -rf stdlib-docs
 	@rm -f src/common/dtrace_probes.h
 	-@rmdir build 2>/dev/null ||:
 	@echo 'Repository cleaned ($(PONY_BUILD_DIR)).'
