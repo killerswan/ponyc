@@ -78,6 +78,7 @@ verify_args
 # create version release branch
 git checkout master
 git pull
+git reset --hard origin/master
 git checkout -b release-$version $commit
 
 # update VERSION and CHANGELOG
@@ -92,6 +93,7 @@ git commit -m "Prep for $version release
 
 # merge into release
 git checkout release
+git reset --hard origin/release
 git merge release-$version -m "Release $version"
 
 # tag release
